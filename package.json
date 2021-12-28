@@ -1,0 +1,24 @@
+{
+  "name": "taskade",
+  "version": "1.0.0",
+  "description": "Taskade MERN clone",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jtng3/Taskade.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jtng3/Taskade/issues"
+  },
+  "homepage": "https://github.com/jtng3/Taskade#readme",
+  "dependencies": {
+    "apollo-server": "^3.5.0",
+    "graphql": "^15.8.0"
+  }
+}
