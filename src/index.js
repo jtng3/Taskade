@@ -2,6 +2,7 @@
 
 const { ApolloServer, gql } = require("apollo-server");
 const { MongoClient } = require("mongodb");
+const bcrypt = require("bcryptjs");
 const dotenv = require("dotenv");
 dotenv.config();
 
@@ -30,7 +31,7 @@ const typeDefs = gql`
     signUp(input: SignUpInput): AuthUser!
     signIn(input: SignInInput): AuthUser!
   }
-  
+
   input SignUpInput {
     email: String!
     password: String!
@@ -82,13 +83,44 @@ const resolvers = {
     myTaskLists: () => [],
   },
   Mutation: {
-    signUp: (_, data) => {
-      console.log(data.input.email);
+    signUp: async (_, { input }, { db }) => {
+      console.log(input.email);
+      const hashedPassword = bcrypt.hashSync(input.password);
+      const user = {
+        ...input,
+        password: hashedPassword,
+      };
+      // save to database
+      const result = await db.collection("Users").insertOne(user);
+      return {
+        user,
+        token: "token",
+      };
     },
-    signIn: () => {
-
-    }
-  }
+    signIn: async (_, { input }, { db }) => {
+      const user = await db.collection("Users").findOne({ email: input.email });
+      if (!user) {
+        throw new Error("Invalid credentials!");
+      }
+      // check if password is correct
+      const isPasswordCorrect = bcrypt.compareSync(
+        input.password,
+        user.password
+      );
+      if (!isPasswordCorrect) {
+        throw new Error("Invalid credentials!");
+      }
+      return {
+        user,
+        token: "token"
+      };
+      console.log(user);
+    },
+  },
+  User: {
+    // Incase database has either _id or id (wow!!)
+    id: ({ _id, id }) => _id || id,
+  },
 };
 
 const start = async () => {
