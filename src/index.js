@@ -7,10 +7,10 @@ const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 dotenv.config();
 
-const { DB_URI, DB_NAME, JWT_ } = process.env; // pull from .env file
+const { DB_URI, DB_NAME, JWT_SECRET} = process.env; // pull from .env file
 
 const getToken = (user) =>
-  jwt.sign({ id: user.id }.JWT_SECRET, { expiresIn: "30 days" });
+  jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "30  days" });
 
 const books = [
   {
