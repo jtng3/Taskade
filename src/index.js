@@ -33,6 +33,35 @@ const typeDefs = gql`
     books: [Book]
   }
 
+  type Query {
+      myTaskLists: [TaskList!]!
+  }
+  type User {
+      id: ID!
+      name: String!
+      email: String!
+      avatar: String
+  }
+
+  type TaskList {
+      id: ID!
+      createdAt: String!
+      title: String!
+      progress: Float!
+
+      users: [User!]!
+      todos: [Todo!]!
+  }
+
+  type Todo {
+      id: ID!
+      content: String!
+      isComplete: Boolean!
+
+      taskListId: ID!
+      taskList: TaskList!
+  }
+
   # This "Book" type defines the queryable fields for every book in our data source.
   type Book {
     title: String
