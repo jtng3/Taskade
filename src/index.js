@@ -47,7 +47,9 @@ const typeDefs = gql`
 // schema. This resolver retrieves books from the "books" array above.
 const resolvers = {
     Query: {
-        books: () => books,
+        books: () => { 
+            return books 
+        },
     },
 };
 
@@ -57,9 +59,13 @@ const start = async () => {
     await client.connect();
     const db = client.db(DB_NAME);
 
+    const context = {
+        db,
+    }
+
     // The ApolloServer constructor requires two parameters: your schema
     // definition and your set of resolvers.
-    const server = new ApolloServer({ typeDefs, resolvers });
+    const server = new ApolloServer({ typeDefs, resolvers, context });
 
     // The `listen` method launches a web server.
     server.listen().then(({ url }) => {
