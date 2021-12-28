@@ -3,10 +3,14 @@
 const { ApolloServer, gql } = require("apollo-server");
 const { MongoClient } = require("mongodb");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 dotenv.config();
 
-const { DB_URI, DB_NAME } = process.env; // pull from .env file
+const { DB_URI, DB_NAME, JWT_ } = process.env; // pull from .env file
+
+const getToken = (user) =>
+  jwt.sign({ id: user.id }.JWT_SECRET, { expiresIn: "30 days" });
 
 const books = [
   {
@@ -94,7 +98,7 @@ const resolvers = {
       const result = await db.collection("Users").insertOne(user);
       return {
         user,
-        token: "token",
+        token: getToken(user),
       };
     },
     signIn: async (_, { input }, { db }) => {
@@ -112,7 +116,7 @@ const resolvers = {
       }
       return {
         user,
-        token: "token"
+        token: getToken(user),
       };
       console.log(user);
     },
