@@ -1,16 +1,35 @@
 // from: https://www.apollographql.com/docs/apollo-server/getting-started/
 
 const { ApolloServer, gql } = require("apollo-server");
-const { MongoClient } = require("mongodb");
+const { MongoClient, ObjectId } = require("mongodb");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 dotenv.config();
 
-const { DB_URI, DB_NAME, JWT_SECRET} = process.env; // pull from .env file
+const { DB_URI, DB_NAME, JWT_SECRET } = process.env; // pull from .env file
 
 const getToken = (user) =>
-  jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "30  days" });
+  jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "30  days" });
+
+const getUserFromToken = async (token, db) => {
+  console.log("getUserFromToken token: " + token);
+  if (!token) {
+    return null;
+  }
+  const tokenData = jwt.verify(token, JWT_SECRET);
+  console.log({ tokenData });
+  if (!tokenData?.id) {
+    return null;
+  }
+  const user = await db
+    .collection("Users")
+    .findOne({ _id: ObjectId(tokenData.id) });
+  
+  console.log("getUserFromToken User: " + {user} );
+
+  return user;
+};
 
 const books = [
   {
@@ -118,7 +137,6 @@ const resolvers = {
         user,
         token: getToken(user),
       };
-      console.log(user);
     },
   },
   User: {
@@ -136,13 +154,21 @@ const start = async () => {
   await client.connect();
   const db = client.db(DB_NAME);
 
-  const context = {
-    db,
-  };
-
   // The ApolloServer constructor requires two parameters: your schema
   // definition and your set of resolvers.
-  const server = new ApolloServer({ typeDefs, resolvers, context });
+  const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    context: async ({ req }) => {
+      console.log("req.headers.authorization: " + req.headers.authorization);
+      const user = await getUserFromToken(req.headers.authorization, db);
+      console.log("user in server: " + JSON.stringify(user));
+      return {
+        db,
+        user,
+      };
+    },
+  });
 
   // The `listen` method launches a web server.
   server.listen().then(({ url }) => {
