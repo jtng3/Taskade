@@ -13,7 +13,6 @@ const getToken = (user) =>
   jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "30  days" });
 
 const getUserFromToken = async (token, db) => {
-  console.log("getUserFromToken token: " + token);
   if (!token) {
     return null;
   }
@@ -25,8 +24,6 @@ const getUserFromToken = async (token, db) => {
   const user = await db
     .collection("Users")
     .findOne({ _id: ObjectId(tokenData.id) });
-  
-  console.log("getUserFromToken User: " + {user} );
 
   return user;
 };
@@ -53,6 +50,7 @@ const typeDefs = gql`
   type Mutation {
     signUp(input: SignUpInput): AuthUser!
     signIn(input: SignInInput): AuthUser!
+    createTaskList(title: String!): TaskList!
   }
 
   input SignUpInput {
@@ -107,7 +105,7 @@ const resolvers = {
   },
   Mutation: {
     signUp: async (_, { input }, { db }) => {
-      console.log(input.email);
+      // console.log(input.email);
       const hashedPassword = bcrypt.hashSync(input.password);
       const user = {
         ...input,
@@ -115,11 +113,15 @@ const resolvers = {
       };
       // save to database
       const result = await db.collection("Users").insertOne(user);
+      const newUser = await db
+        .collection("Users")
+        .findOne({ _id: result.insertedId });
       return {
-        user,
-        token: getToken(user),
+        user: newUser,
+        token: getToken(newUser),
       };
     },
+
     signIn: async (_, { input }, { db }) => {
       const user = await db.collection("Users").findOne({ email: input.email });
       if (!user) {
@@ -138,10 +140,39 @@ const resolvers = {
         token: getToken(user),
       };
     },
+
+    createTaskList: async (_, { title }, { db, user }) => {
+      if (!user) {
+        throw new Error("Authentication Error. Please sign in");
+      }
+      const newTaskList = {
+        title,
+        createdAt: new Date().toISOString(),
+        userIds: [user._id],
+      };
+      const result = await db.collection("TaskList").insertOne(newTaskList);
+      console.log("RESULT: " + JSON.stringify(result.insertedId));
+      const savedTaskList = await db
+        .collection("TaskList")
+        .findOne({ _id: result.insertedId });
+      console.log("SAVEDTASKLIST: " + JSON.stringify(savedTaskList));
+      console.table(savedTaskList);
+      return savedTaskList;
+    },
   },
   User: {
     // Incase database has either _id or id (wow!!)
     id: ({ _id, id }) => _id || id,
+  },
+
+  TaskList: {
+    // Incase database has either _id or id (wow!!)
+    id: ({ _id, id }) => _id || id,
+    progress: () => 0,
+    users: ({ userIds }, _, { db }) =>
+      Promise.all(
+        userIds.map((userId) => db.collection("Users").findOne({ _id: userId }))
+      ),
   },
 };
 
@@ -160,9 +191,9 @@ const start = async () => {
     typeDefs,
     resolvers,
     context: async ({ req }) => {
-      console.log("req.headers.authorization: " + req.headers.authorization);
+      //      console.log("req.headers.authorization: " + req.headers.authorization);
       const user = await getUserFromToken(req.headers.authorization, db);
-      console.log("user in server: " + JSON.stringify(user));
+      // console.log("user in server: " + JSON.stringify(user));
       return {
         db,
         user,
