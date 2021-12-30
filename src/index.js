@@ -28,17 +28,6 @@ const getUserFromToken = async (token, db) => {
   return user;
 };
 
-const books = [
-  {
-    title: "The Awakening",
-    author: "Kate Chopin",
-  },
-  {
-    title: "City of Glass",
-    author: "Paul Auster",
-  },
-];
-
 // A schema is a collection of type definitions (hence "typeDefs")
 // that together define the "shape" of queries that are executed against
 // your data.
@@ -51,6 +40,7 @@ const typeDefs = gql`
     signUp(input: SignUpInput): AuthUser!
     signIn(input: SignInInput): AuthUser!
     createTaskList(title: String!): TaskList!
+    updateTaskList(id: ID!, title: String!): TaskList!
   }
 
   input SignUpInput {
@@ -109,8 +99,8 @@ const resolvers = {
         .collection("TaskList")
         .find({ userIds: user._id })
         .toArray();
-      console.log("TASKLIST\n");
-      console.table(taskLists);
+      //console.log("TASKLIST\n");
+      //console.table(taskLists);
       return taskLists;
     },
   },
@@ -169,6 +159,24 @@ const resolvers = {
       console.log("SAVEDTASKLIST: " + JSON.stringify(savedTaskList));
       console.table(savedTaskList);
       return savedTaskList;
+    },
+    updateTaskList: async (_, { id, title }, { db, user }) => {
+      if (!user) {
+        throw new Error("Authentication Error. Please sign in");
+      }
+
+      const result = await db.collection("TaskList").updateOne(
+        {
+          _id: ObjectId(id),
+        },
+        {
+          $set: {
+            title,
+          },
+        }
+      );
+      // simplified version of similar code from createTaskList
+      return await db.collection("TaskList").findOne({ _id: ObjectId(id) });
     },
   },
   User: {
