@@ -34,6 +34,7 @@ const getUserFromToken = async (token, db) => {
 const typeDefs = gql`
   type Query {
     myTaskLists: [TaskList!]!
+    getTaskList(id: ID!): TaskList
   }
 
   type Mutation {
@@ -100,9 +101,13 @@ const resolvers = {
         .collection("TaskList")
         .find({ userIds: user._id })
         .toArray();
-      //console.log("TASKLIST\n");
-      //console.table(taskLists);
       return taskLists;
+    },
+    getTaskList: async (_, { id }, { db, user }) => {
+      if (!user) {
+        throw new Error("Authentication Error. Please sign in");
+      }
+      return await db.collection("TaskList").findOne({ _id: ObjectId(id) });
     },
   },
   Mutation: {
@@ -153,12 +158,9 @@ const resolvers = {
         userIds: [user._id],
       };
       const result = await db.collection("TaskList").insertOne(newTaskList);
-      console.log("RESULT: " + JSON.stringify(result.insertedId));
       const savedTaskList = await db
         .collection("TaskList")
         .findOne({ _id: result.insertedId });
-      console.log("SAVEDTASKLIST: " + JSON.stringify(savedTaskList));
-      console.table(savedTaskList);
       return savedTaskList;
     },
     updateTaskList: async (_, { id, title }, { db, user }) => {
@@ -187,7 +189,7 @@ const resolvers = {
       const result = await db
         .collection("TaskList")
         .deleteOne({ _id: ObjectId(id) });
-      return (result.deletedCount == 0) ? false: true;
+      return result.deletedCount == 0 ? false : true;
     },
   },
   User: {
