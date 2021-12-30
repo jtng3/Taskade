@@ -43,6 +43,7 @@ const typeDefs = gql`
     createTaskList(title: String!): TaskList!
     updateTaskList(id: ID!, title: String!): TaskList!
     deleteTaskList(id: ID!): Boolean!
+    addUserToTaskList(taskListId: ID!, userId: ID!): TaskList
   }
 
   input SignUpInput {
@@ -190,6 +191,27 @@ const resolvers = {
         .collection("TaskList")
         .deleteOne({ _id: ObjectId(id) });
       return result.deletedCount == 0 ? false : true;
+    },
+    addUserToTaskList: async (_, { taskListId, userId }, { db, user }) => {
+      if (!user) {
+        throw new Error("Authentication Error. Please sign in");
+      }
+      const taskList = await db.collection('TaskList').findOne({ _id: ObjectId(taskListId) });
+      if (!taskList) {
+        return null;
+      }
+      if (taskList.userIds.find((dbId) => dbId.toString() === userId.toString())) {
+        return taskList;
+      }
+      // TODO only collaborators of this task list should be able to add new users
+      const result = await db
+        .collection("TaskList")
+        .updateOne(
+          { _id: ObjectId(taskListId) },
+          { $push: { userIds: ObjectId(userId) } }
+        );
+
+      return await db.collection("TaskList").findOne({ _id: ObjectId(taskListId) });
     },
   },
   User: {
