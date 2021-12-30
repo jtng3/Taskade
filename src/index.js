@@ -41,6 +41,7 @@ const typeDefs = gql`
     signIn(input: SignInInput): AuthUser!
     createTaskList(title: String!): TaskList!
     updateTaskList(id: ID!, title: String!): TaskList!
+    deleteTaskList(id: ID!): Boolean!
   }
 
   input SignUpInput {
@@ -177,6 +178,16 @@ const resolvers = {
       );
       // simplified version of similar code from createTaskList
       return await db.collection("TaskList").findOne({ _id: ObjectId(id) });
+    },
+    deleteTaskList: async (_, { id }, { db, user }) => {
+      if (!user) {
+        throw new Error("Authentication Error. Please sign in");
+      }
+      // TODO only collaborators of this task list should be able to delete
+      const result = await db
+        .collection("TaskList")
+        .deleteOne({ _id: ObjectId(id) });
+      return (result.deletedCount == 0) ? false: true;
     },
   },
   User: {
