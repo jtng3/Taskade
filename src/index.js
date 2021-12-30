@@ -17,7 +17,7 @@ const getUserFromToken = async (token, db) => {
     return null;
   }
   const tokenData = jwt.verify(token, JWT_SECRET);
-  console.log({ tokenData });
+  // console.log({ tokenData });
   if (!tokenData?.id) {
     return null;
   }
@@ -101,7 +101,18 @@ const typeDefs = gql`
 // schema. This resolver retrieves books from the "books" array above.
 const resolvers = {
   Query: {
-    myTaskLists: () => [],
+    myTaskLists: async (_, __, { db, user }) => {
+      if (!user) {
+        throw new Error("Authentication Error. Please sign in");
+      }
+      const taskLists = await db
+        .collection("TaskList")
+        .find({ userIds: user._id })
+        .toArray();
+      console.log("TASKLIST\n");
+      console.table(taskLists);
+      return taskLists;
+    },
   },
   Mutation: {
     signUp: async (_, { input }, { db }) => {
